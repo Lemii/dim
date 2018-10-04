@@ -23,38 +23,54 @@ args = parser.parse_args()
 def setup_network():
 	network_lookup = {	
 	"mainnet": [
-			"https://node01.lisk.io", 
-			"https://node02.lisk.io",
-			"https://node03.lisk.io",
-			"https://node04.lisk.io",
-			"https://node05.lisk.io",
-			"https://node06.lisk.io",
-			"https://node07.lisk.io",
-			"https://node08.lisk.io",
-				],
+		"https://node01.lisk.io", 
+		"https://node02.lisk.io",
+		"https://node03.lisk.io",
+		"https://node04.lisk.io",
+		"https://node05.lisk.io",
+		"https://node06.lisk.io",
+		"https://node07.lisk.io",
+		"https://node08.lisk.io",
+		"https://liskwallet.punkrock.me",
+		"https://wallet.lisknode.io"
+			],
+
 	"testnet": [
-			"https://testnet.lisk.io"
-				],
-	"custom": [
-			"http://127.0.0.1:7000"
-				]
+		"https://testnet.lisk.io",
+		"https://testnet-wallet.lisknode.io",
+		"http://198.50.245.220:7000",
+		"http://lisk99.mzpool.net:7000"	
+			]
 	}
+
+	def custom_network():
+		print "Please enter a custom node address + port (eg: http://127.0.0.1:7000)"
+		node = raw_input("> ")
+		print
+		return node
 
 	if args.network is None:
 		while True:
-			print "Choose a network (mainnet / testnet)"
+			print "Choose a network (mainnet / testnet / custom)"
 			answer = raw_input("> ")
 			answer_normalized = answer.lower().strip()	
 			print		
 			if answer_normalized in network_lookup:
 				node = network_lookup[answer_normalized][random.randint(0, len(network_lookup[answer_normalized]) - 1)]
 				break
+			elif answer_normalized == "custom":
+			    node = custom_network()
+			    break
+
+	elif args.network.lower() == "custom":
+		node = custom_network()
 
 	else:
 		node = network_lookup[args.network][random.randint(0, len(network_lookup[args.network]) - 1)]
 
+
 	print "Using node: %s" % node
-	node_status = get_json(node + "/api/node/status", True)
+	node_status = get_json(node + "/api/node/status", True, 3)
 	return node
 
 
@@ -91,8 +107,12 @@ def setup_filename(delegate_name):
 	return filename
 
 
-def get_json(endpoint, is_alive_log=False):
-	response = requests.get(endpoint)
+def get_json(endpoint, is_alive_log=False, seconds=60):
+	try:
+		response = requests.get(endpoint, timeout=seconds)
+	except:
+		print "No response from node."
+		sys.exit()
 
 	if response.status_code == 200:
 		if is_alive_log:
@@ -101,7 +121,7 @@ def get_json(endpoint, is_alive_log=False):
 		print "Too many requests, exceeded rate limit."
 		sys.exit()
 	elif response.status_code == 500:
-		print "Unexpected error"
+		print "Unexpected error."
 		sys.exit()
 
 	return response.json()
@@ -131,7 +151,7 @@ def get_total_values(blockdata):
 
 # Find the required amount of iterations to reach the nearest defined block (using timestamps)
 def seek_block(date, mode, iterations_total):
-	print "Seeking '%s' block..." % mode
+	print "\nDetermining required offset."
 
 	iterations = 0
 	offset = 0
@@ -139,11 +159,12 @@ def seek_block(date, mode, iterations_total):
 	timestamp_input = int(create_timestamp(date)) - LISK_EPOCH
 	
 	for i in xrange(iterations_total):
-		json_data = get_json(node + "/api/blocks?limit=1&offset=%s&generatorPublicKey=%s" % (offset, publickey))
+		json_data = get_json(node + "/api/blocks?limit=1&sort=height:asc&offset=%s&generatorPublicKey=%s" % (offset, publickey))
 		page_timestamp = json_data['data'][0]['timestamp']
-		timestamp_diff = page_timestamp - timestamp_input
+		timestamp_diff = timestamp_input - page_timestamp
 		
 		if mode == "start" and timestamp_diff < 0:
+			offset -= 100
 			break
 		if mode == "end" and timestamp_diff < 0:
 			offset -= 100
@@ -153,7 +174,8 @@ def seek_block(date, mode, iterations_total):
 			mult = (timestamp_diff / 200000)
 		else:
 			mult = 1	
-		print "Diff %s, %s = %s" % (timestamp_input, page_timestamp, timestamp_diff)
+		#print "Diff %s, %s = %s" % (timestamp_input, page_timestamp, timestamp_diff)
+		print "Seeking..."
 		print "Pages jumped: %s" % mult
 
 		offset += (100*mult)
@@ -168,7 +190,7 @@ print '''
   ___    ___   __  __ 
  |   \  |_ _| |  \/  |
  | |) |  | |  | |\/| |
- |___/  |___| |_|  |_|  v1.0.0
+ |___/  |___| |_|  |_|  v1.1.0
   '''          
 print "Delegate Income Monitor"
 print "Created by Lemii"
@@ -184,7 +206,7 @@ filename = setup_filename(delegate_name)
 def main():
 
 	forging_stats = get_json(node + "/api/delegates/%s/forging_statistics" % address)
-	iterations_total = (int(forging_stats['data']['count']) / 100) + 1
+	iterations_total = (int(forging_stats['data']['count']) / 100)
 	blockstats =[]
 	current_day = 0
 	block_number = 0
@@ -209,7 +231,7 @@ def main():
 
 
 	# Interactive wizard for end date
-	if args.end is None and start is not None:
+	if args.end is None:
 		while True:
 			print "(OPTIONAL) Enter end date (yyyy/mm/dd):"
 			answer = raw_input("> ")
@@ -225,39 +247,34 @@ def main():
 
 	# Calculate necessary amount of iterations (number of API result pages to go through)
 	if start is not None:
-		iterations_start, offset_start = seek_block(start, "start", iterations_total)
-		print "Start block found.\n"
-		if end is not None:
-			iterations_end, offset_end = seek_block(end, "end", iterations_total)
-			print "End block found.\n"
-			offset = offset_end
-			iterations_required = (iterations_start - iterations_end) + 1
-
-		else:
-			iterations_required = iterations_total - (iterations_total - iterations_start)
-			offset = 0
+		iterations_diff, offset = seek_block(start, "start", iterations_total)
+		print "Offset found.\n"
+		iterations_required = iterations_total - iterations_diff
 
 	else: 
 		iterations_required = iterations_total
 		offset = 0
 
 
-	print "Using offset: %s" % offset
-	print "Number of pages to process: %s (~%s blocks)\n" % (iterations_required, int(iterations_required) * 100)
-
-
-	# Get block results (limited to 100 per page)
+	# Get block results (limited to 100 per page / API call)
 	for i in xrange(iterations_required):
-		block_list = get_json(node + "/api/blocks?limit=100&offset=%s&generatorPublicKey=%s" % (offset, publickey))
+		block_list = get_json(node + "/api/blocks?limit=100&sort=height:asc&offset=%s&generatorPublicKey=%s" % (offset, publickey))
+		if start != None:
+			timestamp_start = create_timestamp(start)
+		if end != None:
+			timestamp_end = create_timestamp(end)
+
 		# Retrieve data from each individual block of the result page
+		break_loop = False
 		for entry in block_list['data']:
 			ignore = 0
 			timestamp = LISK_EPOCH + int(entry['timestamp'])
-			if start != None and timestamp < create_timestamp(start):
+			if start != None and timestamp < timestamp_start:
 				ignore = 1
 				continue
-			if start != None and end != None and timestamp > create_timestamp(end):
+			if end != None and timestamp > timestamp_end:
 				ignore = 1
+				break_loop = True
 				continue
 
 			date_time = datetime.datetime.fromtimestamp(timestamp).isoformat()
@@ -291,11 +308,11 @@ def main():
 			time.sleep(0.02)
 
 		offset += 100
+		if break_loop == True:
+			break		
 
 
 	print "\n\nSummary:"
-	#print "Address: %s (%s)" % (address, delegate_name)
-	#print "Start / End date: %s - %s" % (start, end)
 	lsk, btc, usd, eur = get_total_values(blockstats)
 	print "Total LSK forged: %s " % lsk
 	print "Total BTC value: %s" % btc
