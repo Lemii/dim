@@ -32,13 +32,12 @@ def setup_network():
 		"https://node07.lisk.io",
 		"https://node08.lisk.io",
 		"https://liskwallet.punkrock.me",
-		"https://wallet.lisknode.io"
+		"https://api.lisknode.io"
 			],
 
 	"testnet": [
 		"https://testnet.lisk.io",
-		"https://testnet-wallet.lisknode.io",
-		"http://198.50.245.220:7000",
+		"https://testnet-api.lisknode.io",
 		"http://lisk99.mzpool.net:7000"	
 			]
 	}
@@ -190,7 +189,7 @@ print '''
   ___    ___   __  __ 
  |   \  |_ _| |  \/  |
  | |) |  | |  | |\/| |
- |___/  |___| |_|  |_|  v1.1.0
+ |___/  |___| |_|  |_|  v1.1.2
   '''          
 print "Delegate Income Monitor"
 print "Created by Lemii"
