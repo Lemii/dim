@@ -6,10 +6,10 @@ A little demonstration video can be found [here](https://www.youtube.com/watch?v
 If you like this software, please consider a donation =] `6725360537423611335L`
 
 ## Usage
-DIM can be run "as-is" in interactive mode, or with optional arguments.
+DIM can be run "as-is" in interactive mode (ie: simply running the tool), or with optional arguments.
 
 #### Interactive Mode
-Open `dim.exe` and follow the instructions.
+Run `dim` and follow the instructions.
 
 #### Arguments
 DIM accepts multiple (optional) arguments. Examples are:
@@ -20,7 +20,7 @@ DIM accepts multiple (optional) arguments. Examples are:
 
 For a complete list, please see:
 ``` 
-.\dim.exe -h
+\dim.exe -h 
 
 optional arguments:
   -h, --help            show this help message and exit
