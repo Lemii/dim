@@ -3,7 +3,7 @@ A tool to collect data from all blocks forged by a delegate in a certain time pe
 
 A little demonstration video can be found [here](https://www.youtube.com/watch?v=mW54ZHsf-SU).
 
-If you like this software, please consider a donation =] `6725360537423611335L`
+If you find my tools useful, please consider voting for my delegate `lemii` or donating to `5222060513855166167L`. Thanks!
 
 ## Usage
 DIM can be run "as-is" in interactive mode (ie: simply running the tool), or with optional arguments.
